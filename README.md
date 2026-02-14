@@ -2,6 +2,8 @@
 
 **Enable DevTools in Tauri release builds.**
 
+![tauri-spy in action](screenshots/b.png)
+
 `tauri-spy` is a CLI tool that launches any Tauri application with its developer tools (inspector) enabled — even in production/release builds where DevTools are normally disabled.
 
 ## How It Works
