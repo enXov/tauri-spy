@@ -1,0 +1,17 @@
+[package]
+name = "tauri-spy"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool to enable WebKitGTK DevTools in Tauri release builds via LD_PRELOAD injection"
+license = "MIT"
+repository = "https://github.com/enXov/tauri-spy"
+readme = "README.md"
+keywords = ["tauri", "devtools", "webkit", "debugging", "linux"]
+categories = ["development-tools::debugging", "command-line-utilities"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+colored = "2"
+
+[build-dependencies]
+cc = "1"
