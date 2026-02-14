@@ -103,11 +103,15 @@ fn main() -> ExitCode {
     // Set auto-open environment variable for the injection library
     let auto_open = if cli.auto_open { "1" } else { "0" };
 
-    // Launch target with LD_PRELOAD
+    // Launch target with LD_PRELOAD and WebKit rendering workarounds
     let status = Command::new(&cli.target)
         .args(&cli.args)
         .env("LD_PRELOAD", &preload)
         .env("TAURI_SPY_AUTO_OPEN", auto_open)
+        // Work around WebKitGTK GPU rendering issues (blank/black window)
+        // See: https://github.com/nicbarker/clay/issues/213
+        .env("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+        .env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
         .status();
 
     match status {

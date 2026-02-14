@@ -1,6 +1,6 @@
 # tauri-spy
 
-**Enable WebKitGTK DevTools in Tauri release builds.**
+**Enable DevTools in Tauri release builds.**
 
 `tauri-spy` is a CLI tool that launches any Tauri application with its developer tools (inspector) enabled — even in production/release builds where DevTools are normally disabled.
 
@@ -8,7 +8,7 @@
 
 1. You run `tauri-spy <path-to-tauri-app>`
 2. The tool injects `libspy.so` via `LD_PRELOAD`
-3. The injection library hooks `gtk_main()` and enables WebKitGTK developer extras
+3. The injection library hooks `gtk_main()` and enables developer extras
 4. DevTools become available via **Ctrl+Shift+I** or **right-click → Inspect Element**
 
 ## Installation
