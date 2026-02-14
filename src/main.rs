@@ -1,6 +1,7 @@
 use clap::Parser;
 use colored::Colorize;
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -60,7 +61,57 @@ fn validate_target(path: &Path) -> Result<(), String> {
         }
     }
 
+    // Read ELF header for validation
+    let bytes = fs::read(path).map_err(|e| format!("Failed to read target binary: {}", e))?;
+
+    // Check ELF magic bytes
+    if bytes.len() < 64 || &bytes[0..4] != b"\x7fELF" {
+        return Err(format!(
+            "Target is not an ELF binary: {}\n  {} tauri-spy only works with Linux ELF executables",
+            path.display(),
+            "hint:".yellow().bold()
+        ));
+    }
+
+    // Check 64-bit (EI_CLASS == 2)
+    if bytes[4] != 2 {
+        return Err(format!(
+            "Target is a 32-bit binary — tauri-spy requires x86_64\n  {} Rebuild the target for x86_64",
+            "hint:".yellow().bold()
+        ));
+    }
+
+    // Check x86_64 architecture (e_machine == 0x3E at offset 18)
+    let e_machine = u16::from_le_bytes([bytes[18], bytes[19]]);
+    if e_machine != 0x3E {
+        return Err(format!(
+            "Target architecture is not x86_64 (e_machine=0x{:X})\n  {} tauri-spy currently only supports x86_64",
+            e_machine,
+            "hint:".yellow().bold()
+        ));
+    }
+
+    // Check dynamically linked (ET_DYN or ET_EXEC with PT_INTERP)
+    let e_type = u16::from_le_bytes([bytes[16], bytes[17]]);
+    // ET_EXEC=2, ET_DYN=3 (PIE executables are ET_DYN)
+    if e_type != 2 && e_type != 3 {
+        return Err(format!(
+            "Target is not an executable ELF (type={})\n  {} Expected a dynamically linked executable",
+            e_type,
+            "hint:".yellow().bold()
+        ));
+    }
+
     Ok(())
+}
+
+/// Check if WebKitGTK is available on the system
+fn check_webkit_available() -> bool {
+    Command::new("pkg-config")
+        .args(["--exists", "webkit2gtk-4.1"])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
 }
 
 fn main() -> ExitCode {
@@ -70,6 +121,23 @@ fn main() -> ExitCode {
     if let Err(e) = validate_target(&cli.target) {
         eprintln!("{} {}", "error:".red().bold(), e);
         return ExitCode::FAILURE;
+    }
+
+    // Check WebKitGTK availability
+    if !check_webkit_available() {
+        eprintln!(
+            "{} WebKitGTK 4.1 not found on this system",
+            "warning:".yellow().bold()
+        );
+        eprintln!(
+            "  {} Install with: {}",
+            "hint:".yellow().bold(),
+            "sudo apt install libwebkit2gtk-4.1-dev".dimmed()
+        );
+        eprintln!(
+            "  {} Continuing anyway — injection may still work if the target bundles WebKitGTK",
+            "note:".cyan().bold()
+        );
     }
 
     // Find the injection library
@@ -120,6 +188,11 @@ fn main() -> ExitCode {
                 ExitCode::SUCCESS
             } else {
                 let code = status.code().unwrap_or(1);
+                eprintln!(
+                    "{} Target exited with code {}",
+                    "note:".cyan().bold(),
+                    code
+                );
                 ExitCode::from(code as u8)
             }
         }
